@@ -78,8 +78,8 @@ export class StepFunctionsStack extends cdk.Stack {
       lambdaFunction: props.orchestratorFn,
       payload: sfn.TaskInput.fromObject({
         action:      'POST_SIZE_WARNING',
-        session_id:  sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata: sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
+        session_id:  sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata: sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
       }),
     }).next(reviewComplete);
 
@@ -90,8 +90,8 @@ export class StepFunctionsStack extends cdk.Stack {
       lambdaFunction: props.orchestratorFn,
       payload: sfn.TaskInput.fromObject({
         action:      'NOTIFY_SLACK',
-        session_id:  sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata: sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
+        session_id:  sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata: sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
       }),
     }).next(reviewComplete);
 
@@ -101,47 +101,47 @@ export class StepFunctionsStack extends cdk.Stack {
     const securityIter1 = new tasks.LambdaInvoke(this, 'SecurityAgentIteration1', {
       lambdaFunction: props.securityFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         1,
         previous_findings: null,
       }),
-      resultPath: '$.security_iteration_1',
+      resultPath: '$.security_output',
     }).addRetry({ errors: ['Lambda.ServiceException'], maxAttempts: 2, interval: cdk.Duration.seconds(2), backoffRate: 2 });
 
     const securityIter2 = new tasks.LambdaInvoke(this, 'SecurityAgentIteration2', {
       lambdaFunction: props.securityFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         2,
-        previous_findings: sfn.JsonPath.objectAt('$.security_iteration_1.Payload.findings'),
+        previous_findings: sfn.JsonPath.objectAt('$.security_output.Payload.findings'),
       }),
-      resultPath: '$.security_iteration_2',
+      resultPath: '$.security_output',
     });
 
     const securityIter3 = new tasks.LambdaInvoke(this, 'SecurityAgentIteration3', {
       lambdaFunction: props.securityFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         3,
-        previous_findings: sfn.JsonPath.objectAt('$.security_iteration_2.Payload.findings'),
+        previous_findings: sfn.JsonPath.objectAt('$.security_output.Payload.findings'),
       }),
-      resultPath: '$.security_final',
+      resultPath: '$.security_output',
     });
 
     const securityDone = new sfn.Pass(this, 'SecurityAgentDone');
 
     const checkSecurityScore1 = new sfn.Choice(this, 'CheckSecurityScoreIter1')
-      .when(sfn.Condition.numberGreaterThanEquals('$.security_iteration_1.Payload.confidence', 0.85), securityDone)
+      .when(sfn.Condition.numberGreaterThanEquals('$.security_output.Payload.confidence', 0.85), securityDone)
       .otherwise(securityIter2);
 
     const checkSecurityScore2 = new sfn.Choice(this, 'CheckSecurityScoreIter2')
-      .when(sfn.Condition.numberGreaterThanEquals('$.security_iteration_2.Payload.confidence', 0.80), securityDone)
+      .when(sfn.Condition.numberGreaterThanEquals('$.security_output.Payload.confidence', 0.80), securityDone)
       .otherwise(securityIter3.next(securityDone));
 
     securityIter1.next(checkSecurityScore1);
@@ -153,47 +153,47 @@ export class StepFunctionsStack extends cdk.Stack {
     const styleIter1 = new tasks.LambdaInvoke(this, 'StyleAgentIteration1', {
       lambdaFunction: props.styleFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         1,
         previous_findings: null,
       }),
-      resultPath: '$.style_iteration_1',
+      resultPath: '$.style_output',
     }).addRetry({ errors: ['Lambda.ServiceException'], maxAttempts: 2, interval: cdk.Duration.seconds(2), backoffRate: 2 });
 
     const styleIter2 = new tasks.LambdaInvoke(this, 'StyleAgentIteration2', {
       lambdaFunction: props.styleFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         2,
-        previous_findings: sfn.JsonPath.objectAt('$.style_iteration_1.Payload.findings'),
+        previous_findings: sfn.JsonPath.objectAt('$.style_output.Payload.findings'),
       }),
-      resultPath: '$.style_iteration_2',
+      resultPath: '$.style_output',
     });
 
     const styleIter3 = new tasks.LambdaInvoke(this, 'StyleAgentIteration3', {
       lambdaFunction: props.styleFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         3,
-        previous_findings: sfn.JsonPath.objectAt('$.style_iteration_2.Payload.findings'),
+        previous_findings: sfn.JsonPath.objectAt('$.style_output.Payload.findings'),
       }),
-      resultPath: '$.style_final',
+      resultPath: '$.style_output',
     });
 
     const styleDone = new sfn.Pass(this, 'StyleAgentDone');
 
     const checkStyleScore1 = new sfn.Choice(this, 'CheckStyleScoreIter1')
-      .when(sfn.Condition.numberGreaterThanEquals('$.style_iteration_1.Payload.confidence', 0.85), styleDone)
+      .when(sfn.Condition.numberGreaterThanEquals('$.style_output.Payload.confidence', 0.85), styleDone)
       .otherwise(styleIter2);
 
     const checkStyleScore2 = new sfn.Choice(this, 'CheckStyleScoreIter2')
-      .when(sfn.Condition.numberGreaterThanEquals('$.style_iteration_2.Payload.confidence', 0.80), styleDone)
+      .when(sfn.Condition.numberGreaterThanEquals('$.style_output.Payload.confidence', 0.80), styleDone)
       .otherwise(styleIter3.next(styleDone));
 
     styleIter1.next(checkStyleScore1);
@@ -215,10 +215,10 @@ export class StepFunctionsStack extends cdk.Stack {
     const aggregateFindings = new tasks.LambdaInvoke(this, 'AggregateFindings', {
       lambdaFunction: props.aggregatorFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:      sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:     sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        security_output: sfn.JsonPath.objectAt('$.parallel_results[0]'),
-        style_output:    sfn.JsonPath.objectAt('$.parallel_results[1]'),
+        session_id:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:     sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        security_output: sfn.JsonPath.objectAt('$.parallel_results[0].security_output.Payload'),
+        style_output:    sfn.JsonPath.objectAt('$.parallel_results[1].style_output.Payload'),
       }),
       resultPath: '$.aggregator_result',
       taskTimeout: sfn.Timeout.duration(cdk.Duration.seconds(60)),
@@ -240,9 +240,9 @@ export class StepFunctionsStack extends cdk.Stack {
     // Check eligibility routing
     // --------------------------------------------------------
     const checkEligibility = new sfn.Choice(this, 'CheckEligibility')
-      .when(sfn.Condition.stringEquals('$.orchestrator_result.status', 'SKIPPED'), postSizeWarning)
-      .when(sfn.Condition.stringEquals('$.orchestrator_result.status', 'ESCALATED'), notifySlack)
-      .when(sfn.Condition.booleanEquals('$.orchestrator_result.eligible', true),
+      .when(sfn.Condition.stringEquals('$.orchestrator_result.Payload.status', 'SKIPPED'), postSizeWarning)
+      .when(sfn.Condition.stringEquals('$.orchestrator_result.Payload.status', 'ESCALATED'), notifySlack)
+      .when(sfn.Condition.booleanEquals('$.orchestrator_result.Payload.eligible', true),
         runInParallel.next(aggregateFindings).next(checkFinalVerdict)
       )
       .otherwise(reviewFailed);

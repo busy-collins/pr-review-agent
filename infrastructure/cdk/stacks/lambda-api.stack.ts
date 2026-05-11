@@ -91,14 +91,18 @@ export class LambdaAPIStack extends cdk.Stack {
     // Validates PR, fetches diff, routes to SubAgents
     // Also handles failures, Slack notifications, size warnings
     // --------------------------------------------------------
+    // The VALIDATE action makes one Claude-mediated MCP call to fetch the
+    // PR diff; latency scales with diff size and Claude turnaround. 180s
+    // headroom keeps the timeout well above the diff-fetch + checkpoint
+    // write, even for diffs near the 3000-line cap.
     this.orchestratorFn = new lambda.Function(this, 'OrchestratorFn', {
       ...sharedLambdaProps,
       functionName: `pr-review-orchestrator-${props.appEnv}`,
       description:  'PR Review Agent — Orchestrator: validates PRs and coordinates pipeline',
       handler:      'agents/orchestrator/src/index.handler',
       code:         lambda.Code.fromAsset(path.resolve(__dirname, '../../../dist')),
-      timeout:      cdk.Duration.seconds(60),
-      memorySize:   256,
+      timeout:      cdk.Duration.seconds(180),
+      memorySize:   512,
     });
 
     // --------------------------------------------------------

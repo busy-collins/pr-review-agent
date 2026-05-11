@@ -37,6 +37,16 @@ export const githubMCPConfig = {
   authorization_token: process.env.GITHUB_TOKEN ?? '',
 };
 
+// BetaMCPToolResultBlock.content is `string | Array<BetaTextBlock>`.
+// Normalize to a single string for callers; GitHub MCP returns either
+// the raw text payload directly or a single-element text block array.
+function extractMCPResultText(
+  content: Anthropic.Beta.Messages.BetaMCPToolResultBlock['content']
+): string {
+  if (typeof content === 'string') return content;
+  return content.map((block) => block.text).join('');
+}
+
 // ============================================================
 // Core GitHub MCP caller
 // All agents call this — never call GitHub API directly
@@ -45,7 +55,7 @@ export async function callGitHubMCP(
   operation: GitHubOperation,
   params: Record<string, unknown>,
   sessionId: string
-): Promise<unknown> {
+): Promise<string> {
 
   const startTime = Date.now();
 
@@ -67,14 +77,27 @@ export async function callGitHubMCP(
       ],
     } as Parameters<typeof client.beta.messages.create>[0]) as Anthropic.Beta.Messages.BetaMessage;
 
-    // Extract MCP tool result from response
-    const toolResult = response.content.find(
-      (block) => block.type === 'mcp_tool_result'
+    // Extract MCP tool result from response. BetaMCPToolResultBlock.content
+    // is `string | Array<BetaTextBlock>`. We unwrap to the actual payload
+    // string here so callers can JSON.parse / use it as text without
+    // worrying about block structure.
+    const toolResultBlock = response.content.find(
+      (block): block is Anthropic.Beta.Messages.BetaMCPToolResultBlock =>
+        block.type === 'mcp_tool_result'
     );
 
-    if (!toolResult) {
+    if (!toolResultBlock) {
       throw new GitHubMCPError(
         `No tool result returned for operation: ${operation}`,
+        operation,
+        sessionId
+      );
+    }
+
+    if (toolResultBlock.is_error) {
+      const errorText = extractMCPResultText(toolResultBlock.content);
+      throw new GitHubMCPError(
+        `GitHub MCP tool reported error for ${operation}: ${errorText}`,
         operation,
         sessionId
       );
@@ -87,7 +110,7 @@ export async function callGitHubMCP(
       success: true,
     });
 
-    return toolResult;
+    return extractMCPResultText(toolResultBlock.content);
 
   } catch (error) {
     logMCPCall({
@@ -161,7 +184,8 @@ export async function postPRComment(
     { owner, repo: repoName, issue_number: prNumber, body },
     sessionId
   );
-  return result as { id: number; html_url: string };
+  // MCP tool returns the GitHub REST response as a JSON-encoded string.
+  return JSON.parse(result) as { id: number; html_url: string };
 }
 
 // Update existing comment — used on /review reset slash command

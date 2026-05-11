@@ -78,8 +78,8 @@ export class StepFunctionsStack extends cdk.Stack {
       lambdaFunction: props.orchestratorFn,
       payload: sfn.TaskInput.fromObject({
         action:      'POST_SIZE_WARNING',
-        session_id:  sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata: sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
+        session_id:  sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata: sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
       }),
     }).next(reviewComplete);
 
@@ -90,8 +90,8 @@ export class StepFunctionsStack extends cdk.Stack {
       lambdaFunction: props.orchestratorFn,
       payload: sfn.TaskInput.fromObject({
         action:      'NOTIFY_SLACK',
-        session_id:  sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata: sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
+        session_id:  sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata: sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
       }),
     }).next(reviewComplete);
 
@@ -101,9 +101,9 @@ export class StepFunctionsStack extends cdk.Stack {
     const securityIter1 = new tasks.LambdaInvoke(this, 'SecurityAgentIteration1', {
       lambdaFunction: props.securityFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         1,
         previous_findings: null,
       }),
@@ -113,9 +113,9 @@ export class StepFunctionsStack extends cdk.Stack {
     const securityIter2 = new tasks.LambdaInvoke(this, 'SecurityAgentIteration2', {
       lambdaFunction: props.securityFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         2,
         previous_findings: sfn.JsonPath.objectAt('$.security_iteration_1.Payload.findings'),
       }),
@@ -125,9 +125,9 @@ export class StepFunctionsStack extends cdk.Stack {
     const securityIter3 = new tasks.LambdaInvoke(this, 'SecurityAgentIteration3', {
       lambdaFunction: props.securityFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         3,
         previous_findings: sfn.JsonPath.objectAt('$.security_iteration_2.Payload.findings'),
       }),
@@ -153,9 +153,9 @@ export class StepFunctionsStack extends cdk.Stack {
     const styleIter1 = new tasks.LambdaInvoke(this, 'StyleAgentIteration1', {
       lambdaFunction: props.styleFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         1,
         previous_findings: null,
       }),
@@ -165,9 +165,9 @@ export class StepFunctionsStack extends cdk.Stack {
     const styleIter2 = new tasks.LambdaInvoke(this, 'StyleAgentIteration2', {
       lambdaFunction: props.styleFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         2,
         previous_findings: sfn.JsonPath.objectAt('$.style_iteration_1.Payload.findings'),
       }),
@@ -177,9 +177,9 @@ export class StepFunctionsStack extends cdk.Stack {
     const styleIter3 = new tasks.LambdaInvoke(this, 'StyleAgentIteration3', {
       lambdaFunction: props.styleFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
-        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.diff_content'),
+        session_id:        sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:       sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
+        diff_content:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.diff_content'),
         iteration:         3,
         previous_findings: sfn.JsonPath.objectAt('$.style_iteration_2.Payload.findings'),
       }),
@@ -215,8 +215,8 @@ export class StepFunctionsStack extends cdk.Stack {
     const aggregateFindings = new tasks.LambdaInvoke(this, 'AggregateFindings', {
       lambdaFunction: props.aggregatorFn,
       payload: sfn.TaskInput.fromObject({
-        session_id:      sfn.JsonPath.stringAt('$.orchestrator_result.session_id'),
-        pr_metadata:     sfn.JsonPath.objectAt('$.orchestrator_result.pr_metadata'),
+        session_id:      sfn.JsonPath.stringAt('$.orchestrator_result.Payload.session_id'),
+        pr_metadata:     sfn.JsonPath.objectAt('$.orchestrator_result.Payload.pr_metadata'),
         security_output: sfn.JsonPath.objectAt('$.parallel_results[0]'),
         style_output:    sfn.JsonPath.objectAt('$.parallel_results[1]'),
       }),
@@ -240,9 +240,9 @@ export class StepFunctionsStack extends cdk.Stack {
     // Check eligibility routing
     // --------------------------------------------------------
     const checkEligibility = new sfn.Choice(this, 'CheckEligibility')
-      .when(sfn.Condition.stringEquals('$.orchestrator_result.status', 'SKIPPED'), postSizeWarning)
-      .when(sfn.Condition.stringEquals('$.orchestrator_result.status', 'ESCALATED'), notifySlack)
-      .when(sfn.Condition.booleanEquals('$.orchestrator_result.eligible', true),
+      .when(sfn.Condition.stringEquals('$.orchestrator_result.Payload.status', 'SKIPPED'), postSizeWarning)
+      .when(sfn.Condition.stringEquals('$.orchestrator_result.Payload.status', 'ESCALATED'), notifySlack)
+      .when(sfn.Condition.booleanEquals('$.orchestrator_result.Payload.eligible', true),
         runInParallel.next(aggregateFindings).next(checkFinalVerdict)
       )
       .otherwise(reviewFailed);

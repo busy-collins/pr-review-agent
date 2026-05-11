@@ -34,7 +34,7 @@ export interface PRMetadata {
 }
 
 export interface OrchestratorWebhookEvent {
-  event_type: 'pull_request.opened' | 'pull_request.synchronize' | 'issue_comment.created';
+  event_type: 'pull_request.opened' | 'pull_request.synchronize' | 'pull_request.reopened' | 'issue_comment.created';
   pr_number: number;
   repo: string;
   sender: string;

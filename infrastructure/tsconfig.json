@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./cdk.out/build",
+    "types": ["node"],
+    "exactOptionalPropertyTypes": false
+  },
+  "include": [
+    "cdk/**/*.ts"
+  ],
+  "exclude": [
+    "cdk.out",
+    "node_modules"
+  ]
+}

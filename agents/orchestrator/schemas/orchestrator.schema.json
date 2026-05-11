@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Orchestrator Agent Schemas",
+  "description": "Input and output contracts for the Orchestrator Agent",
+
+  "OrchestratorInput": {
+    "type": "object",
+    "required": ["event_type", "pr_number", "repo", "sender", "diff_url", "timestamp"],
+    "properties": {
+      "event_type": {
+        "type": "string",
+        "enum": ["pull_request.opened", "pull_request.synchronize", "issue_comment.created"],
+        "description": "GitHub webhook event type that triggered this review"
+      },
+      "pr_number": {
+        "type": "integer",
+        "description": "GitHub Pull Request number"
+      },
+      "repo": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$",
+        "description": "Repository in owner/repo format",
+        "example": "myorg/my-service"
+      },
+      "sender": {
+        "type": "string",
+        "description": "GitHub username of the PR author"
+      },
+      "diff_url": {
+        "type": "string",
+        "format": "uri",
+        "description": "URL to fetch the raw PR diff"
+      },
+      "diff_line_count": {
+        "type": "integer",
+        "description": "Total number of changed lines in the diff"
+      },
+      "base_branch": {
+        "type": "string",
+        "description": "Target branch the PR merges into",
+        "example": "main"
+      },
+      "head_branch": {
+        "type": "string",
+        "description": "Source branch of the PR"
+      },
+      "slash_command": {
+        "type": ["string", "null"],
+        "enum": ["/review full", "/review security", "/review style", "/review status", "/review reset", null],
+        "description": "Manual slash command if triggered by PR comment, null for automatic triggers"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO8601 timestamp of the webhook event"
+      }
+    }
+  },
+
+  "OrchestratorOutput": {
+    "type": "object",
+    "required": ["session_id", "status", "eligible", "subagents_to_run"],
+    "properties": {
+      "session_id": {
+        "type": "string",
+        "pattern": "^pr-[a-zA-Z0-9_.-]+-[0-9]+-[0-9]+$",
+        "description": "Unique session identifier: pr-{repo}-{pr_number}-{timestamp}",
+        "example": "pr-myorg-myrepo-412-1746123456"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["ELIGIBLE", "SKIPPED", "ESCALATED"],
+        "description": "Eligibility result after validation"
+      },
+      "eligible": {
+        "type": "boolean",
+        "description": "Whether the PR passes all eligibility checks"
+      },
+      "skip_reason": {
+        "type": ["string", "null"],
+        "description": "Reason for skipping if status is SKIPPED",
+        "example": "Diff exceeds 3000 lines — size warning posted"
+      },
+      "subagents_to_run": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["security", "style"]
+        },
+        "description": "Which SubAgents to invoke based on slash command or default (both)"
+      },
+      "diff_content": {
+        "type": "string",
+        "description": "Raw diff content fetched from GitHub, passed to SubAgents"
+      },
+      "pr_metadata": {
+        "type": "object",
+        "description": "PR context passed to all SubAgents",
+        "properties": {
+          "pr_number": { "type": "integer" },
+          "repo": { "type": "string" },
+          "sender": { "type": "string" },
+          "base_branch": { "type": "string" },
+          "head_branch": { "type": "string" },
+          "diff_line_count": { "type": "integer" }
+        }
+      },
+      "checkpoint_saved": {
+        "type": "boolean",
+        "description": "Confirms DynamoDB checkpoint was written successfully"
+      }
+    }
+  }
+}

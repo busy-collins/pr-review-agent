@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Security SubAgent Schemas",
+  "description": "Input and output contracts for the Security SubAgent",
+
+  "SecurityAgentInput": {
+    "type": "object",
+    "required": ["session_id", "pr_metadata", "diff_content", "iteration"],
+    "properties": {
+      "session_id": {
+        "type": "string",
+        "description": "Unique session ID from Orchestrator"
+      },
+      "pr_metadata": {
+        "type": "object",
+        "required": ["pr_number", "repo", "sender"],
+        "properties": {
+          "pr_number": { "type": "integer" },
+          "repo": { "type": "string" },
+          "sender": { "type": "string" },
+          "base_branch": { "type": "string" },
+          "head_branch": { "type": "string" },
+          "diff_line_count": { "type": "integer" }
+        }
+      },
+      "diff_content": {
+        "type": "string",
+        "description": "Raw PR diff content to scan"
+      },
+      "iteration": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 3,
+        "description": "Current Ralph loop iteration number"
+      },
+      "previous_findings": {
+        "type": ["array", "null"],
+        "description": "Findings from previous Ralph loop iteration for refinement",
+        "items": { "$ref": "#/SecurityFinding" }
+      }
+    }
+  },
+
+  "SecurityAgentOutput": {
+    "type": "object",
+    "required": ["agent", "session_id", "confidence", "findings", "iteration", "verdict"],
+    "properties": {
+      "agent": {
+        "type": "string",
+        "const": "security"
+      },
+      "session_id": {
+        "type": "string"
+      },
+      "confidence": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "description": "Confidence score from Ralph loop evaluation"
+      },
+      "findings": {
+        "type": "array",
+        "items": { "$ref": "#/SecurityFinding" }
+      },
+      "iteration": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 3
+      },
+      "ralph_loop_complete": {
+        "type": "boolean",
+        "description": "True when Ralph loop has finished all required iterations"
+      },
+      "verdict": {
+        "type": "string",
+        "enum": ["APPROVED", "CHANGES_REQUESTED", "ESCALATED"]
+      },
+      "checkpoint_saved": {
+        "type": "boolean"
+      }
+    }
+  },
+
+  "SecurityFinding": {
+    "type": "object",
+    "required": ["severity", "category", "file", "line", "description", "suggestion", "blocks_pr"],
+    "properties": {
+      "severity": {
+        "type": "string",
+        "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+      },
+      "category": {
+        "type": "string",
+        "enum": [
+          "HARDCODED_SECRET",
+          "SQL_INJECTION",
+          "COMMAND_INJECTION",
+          "XSS",
+          "AUTH_BYPASS",
+          "BOLA",
+          "JWT_BYPASS",
+          "INSECURE_DEPENDENCY",
+          "PII_EXPOSURE",
+          "UNSAFE_DESERIALIZATION"
+        ]
+      },
+      "file": {
+        "type": "string",
+        "description": "Relative file path from repo root",
+        "example": "src/auth/middleware.ts"
+      },
+      "line": {
+        "type": "integer",
+        "description": "Exact line number in the diff"
+      },
+      "description": {
+        "type": "string",
+        "description": "Clear description of the vulnerability"
+      },
+      "suggestion": {
+        "type": "string",
+        "description": "Concrete fix suggestion — mandatory"
+      },
+      "code_example": {
+        "type": ["string", "null"],
+        "description": "Optional code snippet showing the fix"
+      },
+      "blocks_pr": {
+        "type": "boolean",
+        "description": "True for CRITICAL and HIGH findings"
+      },
+      "owasp_reference": {
+        "type": ["string", "null"],
+        "description": "OWASP Top 10 reference if applicable",
+        "example": "A03:2021 - Injection"
+      }
+    }
+  }
+}

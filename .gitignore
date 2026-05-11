@@ -1,0 +1,31 @@
+node_modules
+
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+frontend/.next/
+frontend/out/
+
+# CDK
+infrastructure/cdk.out/
+infrastructure/cdk.context.json
+
+# Terraform
+terraform/**/.terraform/
+terraform/**/.terraform.lock.hcl
+terraform/**/terraform.tfstate
+terraform/**/terraform.tfstate.backup
+terraform/**/*.tfvars
+!terraform/**/*.tfvars.example
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Claude Code session data
+.claude/

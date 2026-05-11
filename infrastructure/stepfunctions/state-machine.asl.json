@@ -1,0 +1,344 @@
+{
+  "Comment": "PR Review Agent — Orchestration Pipeline",
+  "StartAt": "ValidatePREligibility",
+  "States": {
+
+    "ValidatePREligibility": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-orchestrator",
+      "Parameters": {
+        "action": "VALIDATE",
+        "payload.$": "$"
+      },
+      "ResultPath": "$.orchestrator_result",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleOrchestrationFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "CheckEligibility"
+    },
+
+    "CheckEligibility": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.orchestrator_result.status",
+          "StringEquals": "SKIPPED",
+          "Next": "PostSizeWarning"
+        },
+        {
+          "Variable": "$.orchestrator_result.status",
+          "StringEquals": "ESCALATED",
+          "Next": "NotifySlackEscalation"
+        },
+        {
+          "Variable": "$.orchestrator_result.eligible",
+          "BooleanEquals": true,
+          "Next": "RunSubAgentsInParallel"
+        }
+      ],
+      "Default": "HandleOrchestrationFailure"
+    },
+
+    "PostSizeWarning": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-orchestrator",
+      "Parameters": {
+        "action": "POST_SIZE_WARNING",
+        "session_id.$": "$.orchestrator_result.session_id",
+        "pr_metadata.$": "$.orchestrator_result.pr_metadata"
+      },
+      "Next": "ReviewComplete"
+    },
+
+    "RunSubAgentsInParallel": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "SecurityAgentIteration1",
+          "States": {
+
+            "SecurityAgentIteration1": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-security-agent",
+              "Parameters": {
+                "session_id.$": "$.orchestrator_result.session_id",
+                "pr_metadata.$": "$.orchestrator_result.pr_metadata",
+                "diff_content.$": "$.orchestrator_result.diff_content",
+                "iteration": 1,
+                "previous_findings": null
+              },
+              "ResultPath": "$.security_iteration_1",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 2,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "CheckSecurityScoreIteration1"
+            },
+
+            "CheckSecurityScoreIteration1": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.security_iteration_1.confidence",
+                  "NumericGreaterThanEquals": 0.85,
+                  "Next": "SecurityAgentDone"
+                }
+              ],
+              "Default": "SecurityAgentIteration2"
+            },
+
+            "SecurityAgentIteration2": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-security-agent",
+              "Parameters": {
+                "session_id.$": "$.orchestrator_result.session_id",
+                "pr_metadata.$": "$.orchestrator_result.pr_metadata",
+                "diff_content.$": "$.orchestrator_result.diff_content",
+                "iteration": 2,
+                "previous_findings.$": "$.security_iteration_1.findings"
+              },
+              "ResultPath": "$.security_iteration_2",
+              "Next": "CheckSecurityScoreIteration2"
+            },
+
+            "CheckSecurityScoreIteration2": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.security_iteration_2.confidence",
+                  "NumericGreaterThanEquals": 0.80,
+                  "Next": "SecurityAgentDone"
+                }
+              ],
+              "Default": "SecurityAgentIteration3"
+            },
+
+            "SecurityAgentIteration3": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-security-agent",
+              "Parameters": {
+                "session_id.$": "$.orchestrator_result.session_id",
+                "pr_metadata.$": "$.orchestrator_result.pr_metadata",
+                "diff_content.$": "$.orchestrator_result.diff_content",
+                "iteration": 3,
+                "previous_findings.$": "$.security_iteration_2.findings"
+              },
+              "ResultPath": "$.security_final",
+              "Next": "SecurityAgentDone"
+            },
+
+            "SecurityAgentDone": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "StyleAgentIteration1",
+          "States": {
+
+            "StyleAgentIteration1": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-style-agent",
+              "Parameters": {
+                "session_id.$": "$.orchestrator_result.session_id",
+                "pr_metadata.$": "$.orchestrator_result.pr_metadata",
+                "diff_content.$": "$.orchestrator_result.diff_content",
+                "iteration": 1,
+                "previous_findings": null
+              },
+              "ResultPath": "$.style_iteration_1",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 2,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "CheckStyleScoreIteration1"
+            },
+
+            "CheckStyleScoreIteration1": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.style_iteration_1.confidence",
+                  "NumericGreaterThanEquals": 0.85,
+                  "Next": "StyleAgentDone"
+                }
+              ],
+              "Default": "StyleAgentIteration2"
+            },
+
+            "StyleAgentIteration2": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-style-agent",
+              "Parameters": {
+                "session_id.$": "$.orchestrator_result.session_id",
+                "pr_metadata.$": "$.orchestrator_result.pr_metadata",
+                "diff_content.$": "$.orchestrator_result.diff_content",
+                "iteration": 2,
+                "previous_findings.$": "$.style_iteration_1.findings"
+              },
+              "ResultPath": "$.style_iteration_2",
+              "Next": "CheckStyleScoreIteration2"
+            },
+
+            "CheckStyleScoreIteration2": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.style_iteration_2.confidence",
+                  "NumericGreaterThanEquals": 0.80,
+                  "Next": "StyleAgentDone"
+                }
+              ],
+              "Default": "StyleAgentIteration3"
+            },
+
+            "StyleAgentIteration3": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-style-agent",
+              "Parameters": {
+                "session_id.$": "$.orchestrator_result.session_id",
+                "pr_metadata.$": "$.orchestrator_result.pr_metadata",
+                "diff_content.$": "$.orchestrator_result.diff_content",
+                "iteration": 3,
+                "previous_findings.$": "$.style_iteration_2.findings"
+              },
+              "ResultPath": "$.style_final",
+              "Next": "StyleAgentDone"
+            },
+
+            "StyleAgentDone": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.parallel_results",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleSubAgentFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "AggregateFindings"
+    },
+
+    "AggregateFindings": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-aggregator",
+      "Parameters": {
+        "session_id.$": "$.orchestrator_result.session_id",
+        "pr_metadata.$": "$.orchestrator_result.pr_metadata",
+        "security_output.$": "$.parallel_results[0]",
+        "style_output.$": "$.parallel_results[1]"
+      },
+      "ResultPath": "$.aggregator_result",
+      "TimeoutSeconds": 60,
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleAggregatorFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "CheckFinalVerdict"
+    },
+
+    "CheckFinalVerdict": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.aggregator_result.final_verdict",
+          "StringEquals": "ESCALATED",
+          "Next": "NotifySlackEscalation"
+        }
+      ],
+      "Default": "ReviewComplete"
+    },
+
+    "NotifySlackEscalation": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-orchestrator",
+      "Parameters": {
+        "action": "NOTIFY_SLACK",
+        "session_id.$": "$.orchestrator_result.session_id",
+        "pr_metadata.$": "$.orchestrator_result.pr_metadata",
+        "reason.$": "$.aggregator_result.final_verdict"
+      },
+      "Next": "ReviewComplete"
+    },
+
+    "HandleOrchestrationFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-orchestrator",
+      "Parameters": {
+        "action": "HANDLE_FAILURE",
+        "stage": "ORCHESTRATOR",
+        "error.$": "$.error"
+      },
+      "Next": "ReviewFailed"
+    },
+
+    "HandleSubAgentFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-orchestrator",
+      "Parameters": {
+        "action": "HANDLE_FAILURE",
+        "stage": "SUBAGENT",
+        "error.$": "$.error"
+      },
+      "Next": "ReviewFailed"
+    },
+
+    "HandleAggregatorFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:pr-review-orchestrator",
+      "Parameters": {
+        "action": "HANDLE_FAILURE",
+        "stage": "AGGREGATOR",
+        "error.$": "$.error"
+      },
+      "Next": "ReviewFailed"
+    },
+
+    "ReviewComplete": {
+      "Type": "Succeed"
+    },
+
+    "ReviewFailed": {
+      "Type": "Fail",
+      "Error": "ReviewPipelineFailed",
+      "Cause": "One or more stages in the review pipeline failed after retries"
+    }
+  }
+}

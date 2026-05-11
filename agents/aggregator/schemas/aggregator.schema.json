@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Aggregator Agent Schemas",
+  "description": "Input and output contracts for the Aggregator Agent",
+
+  "AggregatorInput": {
+    "type": "object",
+    "required": ["session_id", "pr_metadata", "security_output", "style_output"],
+    "properties": {
+      "session_id": {
+        "type": "string"
+      },
+      "pr_metadata": {
+        "type": "object",
+        "required": ["pr_number", "repo", "sender"],
+        "properties": {
+          "pr_number": { "type": "integer" },
+          "repo": { "type": "string" },
+          "sender": { "type": "string" },
+          "base_branch": { "type": "string" },
+          "head_branch": { "type": "string" }
+        }
+      },
+      "security_output": {
+        "type": "object",
+        "description": "Full output from SecurityAgentOutput schema",
+        "required": ["agent", "confidence", "findings", "verdict"],
+        "properties": {
+          "agent": { "type": "string", "const": "security" },
+          "confidence": { "type": "number" },
+          "findings": { "type": "array" },
+          "verdict": { "type": "string" }
+        }
+      },
+      "style_output": {
+        "type": "object",
+        "description": "Full output from StyleAgentOutput schema",
+        "required": ["agent", "confidence", "findings", "verdict"],
+        "properties": {
+          "agent": { "type": "string", "const": "style" },
+          "confidence": { "type": "number" },
+          "findings": { "type": "array" },
+          "verdict": { "type": "string" }
+        }
+      }
+    }
+  },
+
+  "AggregatorOutput": {
+    "type": "object",
+    "required": [
+      "session_id",
+      "final_verdict",
+      "overall_confidence",
+      "blocking_count",
+      "non_blocking_count",
+      "github_comment",
+      "comment_posted",
+      "checkpoint_saved"
+    ],
+    "properties": {
+      "session_id": {
+        "type": "string"
+      },
+      "final_verdict": {
+        "type": "string",
+        "enum": ["APPROVED", "CHANGES_REQUESTED", "ESCALATED"]
+      },
+      "overall_confidence": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "description": "Average of security and style confidence scores"
+      },
+      "blocking_count": {
+        "type": "integer",
+        "description": "Total CRITICAL and HIGH findings across both agents"
+      },
+      "non_blocking_count": {
+        "type": "integer",
+        "description": "Total MEDIUM, LOW, INFO findings across both agents"
+      },
+      "conflict_resolutions": {
+        "type": "array",
+        "description": "Cases where both agents flagged the same line — resolved by Aggregator",
+        "items": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string" },
+            "line": { "type": "integer" },
+            "resolution": {
+              "type": "string",
+              "enum": ["SECURITY_WINS", "MERGED", "DEDUPLICATED"]
+            }
+          }
+        }
+      },
+      "github_comment": {
+        "type": "string",
+        "description": "Fully formatted GitHub Markdown comment per SKILL-comment-formatter.md"
+      },
+      "github_comment_url": {
+        "type": ["string", "null"],
+        "format": "uri",
+        "description": "URL of the posted GitHub comment, null if posting failed"
+      },
+      "comment_posted": {
+        "type": "boolean",
+        "description": "True if GitHub comment was posted successfully"
+      },
+      "slack_notified": {
+        "type": "boolean",
+        "description": "True if Slack escalation notification was sent"
+      },
+      "checkpoint_saved": {
+        "type": "boolean"
+      },
+      "completed_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

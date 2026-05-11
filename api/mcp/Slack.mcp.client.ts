@@ -60,7 +60,9 @@ async function callSlackMCP(
     // non-streaming BetaMessage so `.content` is properly typed.
     const response = await client.beta.messages.create({
       model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      // Same reasoning as GitHub MCP — keep budget high enough for
+      // Claude to emit large mcp_tool_use args (escalation summaries).
+      max_tokens: 16384,
       mcp_servers: [slackMCPConfig],
       // MCP connector is opt-in via this beta flag; without it the API
       // rejects `mcp_servers` as "Extra inputs are not permitted".

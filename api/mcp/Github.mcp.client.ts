@@ -64,7 +64,11 @@ export async function callGitHubMCP(
     // don't stream, so narrow to BetaMessage for typed `.content` access.
     const response = await client.beta.messages.create({
       model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      // Has to fit Claude's mcp_tool_use block including any argument
+      // payload (e.g. the full review comment body for create_issue_comment).
+      // 1000 was truncating the tool_use mid-emission so no tool_result
+      // ever appeared in the response.
+      max_tokens: 16384,
       mcp_servers: [githubMCPConfig],
       // MCP connector is opt-in via this beta flag; without it the API
       // rejects `mcp_servers` as "Extra inputs are not permitted".

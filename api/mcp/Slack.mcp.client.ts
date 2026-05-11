@@ -23,9 +23,9 @@ export const slackMCPConfig = {
   type: 'url' as const,
   url: 'https://slack.com/api/mcp',
   name: 'slack-mcp',
-  headers: {
-    Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-  },
+  // Anthropic MCP connector accepts only `authorization_token`;
+  // the API forwards it as `Authorization: Bearer <token>`.
+  authorization_token: process.env.SLACK_BOT_TOKEN ?? '',
 };
 
 // ============================================================
@@ -62,6 +62,9 @@ async function callSlackMCP(
       model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
       max_tokens: 1000,
       mcp_servers: [slackMCPConfig],
+      // MCP connector is opt-in via this beta flag; without it the API
+      // rejects `mcp_servers` as "Extra inputs are not permitted".
+      betas: ['mcp-client-2025-04-04'],
       messages: [
         {
           role: 'user',

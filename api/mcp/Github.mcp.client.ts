@@ -24,14 +24,17 @@ export type GitHubOperation = typeof GITHUB_MCP_OPERATIONS[keyof typeof GITHUB_M
 
 // ============================================================
 // GitHub MCP Configuration
+//
+// The Anthropic MCP connector schema (BetaRequestMCPServerURLDefinition)
+// does not accept custom `headers` — only a single `authorization_token`
+// which the API forwards as `Authorization: Bearer <token>` to the MCP
+// server. GitHub Copilot's MCP endpoint expects bearer auth so this works.
 // ============================================================
 export const githubMCPConfig = {
   type: 'url' as const,
   url: 'https://api.githubcopilot.com/mcp/',
   name: 'github-mcp',
-  headers: {
-    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-  },
+  authorization_token: process.env.GITHUB_TOKEN ?? '',
 };
 
 // ============================================================
@@ -53,6 +56,9 @@ export async function callGitHubMCP(
       model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
       max_tokens: 1000,
       mcp_servers: [githubMCPConfig],
+      // MCP connector is opt-in via this beta flag; without it the API
+      // rejects `mcp_servers` as "Extra inputs are not permitted".
+      betas: ['mcp-client-2025-04-04'],
       messages: [
         {
           role: 'user',

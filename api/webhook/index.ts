@@ -272,6 +272,7 @@ function buildOrchestratorEvent(
   const eventType = `${verification.event}.${verification.action}` as
     | 'pull_request.opened'
     | 'pull_request.synchronize'
+    | 'pull_request.reopened'
     | 'issue_comment.created';
 
   if (verification.event === 'pull_request' && payload.pull_request) {

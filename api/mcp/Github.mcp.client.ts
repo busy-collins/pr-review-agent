@@ -146,19 +146,52 @@ export async function getPullRequest(
   );
 }
 
-// Fetch PR raw diff — used by Orchestrator to pass to SubAgents
+// Fetch PR raw diff — used by Orchestrator to pass to SubAgents.
+// Goes direct to GitHub REST instead of routing through Claude+MCP:
+// this is a pure CRUD fetch with no reasoning step, so the MCP-via-
+// Claude indirection only added latency, max_tokens gymnastics, and
+// failure modes (truncated tool_use blocks, missing tool_result).
 export async function getPullRequestDiff(
   repo: string,
   prNumber: number,
   sessionId: string
 ): Promise<string> {
   const [owner, repoName] = repo.split('/');
-  const result = await callGitHubMCP(
-    GITHUB_MCP_OPERATIONS.GET_PR_DIFF,
-    { owner, repo: repoName, pull_number: prNumber },
-    sessionId
-  );
-  return result as string;
+  const url = `https://api.github.com/repos/${owner}/${repoName}/pulls/${prNumber}`;
+  const startTime = Date.now();
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN ?? ''}`,
+        Accept: 'application/vnd.github.v3.diff',
+        'User-Agent': 'pr-review-agent',
+      },
+    });
+    if (!response.ok) {
+      throw new GitHubMCPError(
+        `GitHub diff fetch failed: ${response.status} ${response.statusText}`,
+        GITHUB_MCP_OPERATIONS.GET_PR_DIFF,
+        sessionId
+      );
+    }
+    const diff = await response.text();
+    logMCPCall({
+      sessionId,
+      operation: GITHUB_MCP_OPERATIONS.GET_PR_DIFF,
+      durationMs: Date.now() - startTime,
+      success: true,
+    });
+    return diff;
+  } catch (error) {
+    logMCPCall({
+      sessionId,
+      operation: GITHUB_MCP_OPERATIONS.GET_PR_DIFF,
+      durationMs: Date.now() - startTime,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
+  }
 }
 
 // Fetch changed files list — used by Orchestrator for line count validation
@@ -175,7 +208,9 @@ export async function getPullRequestFiles(
   );
 }
 
-// Post review comment — used by Aggregator
+// Post review comment — used by Aggregator. Direct REST for the same
+// reason getPullRequestDiff is direct: pure CRUD, no Claude reasoning,
+// and a markdown body that easily exceeded MCP tool_use token budgets.
 export async function postPRComment(
   repo: string,
   prNumber: number,
@@ -183,13 +218,45 @@ export async function postPRComment(
   sessionId: string
 ): Promise<{ id: number; html_url: string }> {
   const [owner, repoName] = repo.split('/');
-  const result = await callGitHubMCP(
-    GITHUB_MCP_OPERATIONS.POST_COMMENT,
-    { owner, repo: repoName, issue_number: prNumber, body },
-    sessionId
-  );
-  // MCP tool returns the GitHub REST response as a JSON-encoded string.
-  return JSON.parse(result) as { id: number; html_url: string };
+  const url = `https://api.github.com/repos/${owner}/${repoName}/issues/${prNumber}/comments`;
+  const startTime = Date.now();
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN ?? ''}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'pr-review-agent',
+      },
+      body: JSON.stringify({ body }),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new GitHubMCPError(
+        `GitHub comment post failed: ${response.status} ${response.statusText} — ${text.slice(0, 200)}`,
+        GITHUB_MCP_OPERATIONS.POST_COMMENT,
+        sessionId
+      );
+    }
+    const json = (await response.json()) as { id: number; html_url: string };
+    logMCPCall({
+      sessionId,
+      operation: GITHUB_MCP_OPERATIONS.POST_COMMENT,
+      durationMs: Date.now() - startTime,
+      success: true,
+    });
+    return json;
+  } catch (error) {
+    logMCPCall({
+      sessionId,
+      operation: GITHUB_MCP_OPERATIONS.POST_COMMENT,
+      durationMs: Date.now() - startTime,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
+  }
 }
 
 // Update existing comment — used on /review reset slash command

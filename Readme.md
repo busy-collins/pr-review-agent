@@ -1,5 +1,6 @@
-# PLAN.md — Autonomous PR Review Agent
-## Project Blueprint & Execution Plan
+# PR Review Agent
+
+## Autonomous, multi-agent code review on every pull request
 
 **Version:** 1.0.0
 **Status:** Phase 7 — Production rollout (shadow-mode soak in progress)

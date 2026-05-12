@@ -186,7 +186,13 @@ export function parseToolResponse(response: {
   if (!toolUse || !toolUse.input || typeof toolUse.input !== 'object') {
     throw new Error('Style agent did not invoke report_findings tool');
   }
-  return toolUse.input as ReportToolInput;
+  const raw = toolUse.input as Partial<ReportToolInput>;
+  // Same defensive coercion as Security — see ralph-loop.ts there.
+  return {
+    findings: Array.isArray(raw.findings) ? raw.findings : [],
+    confidence: typeof raw.confidence === 'number' ? raw.confidence : 0,
+    reasoning: typeof raw.reasoning === 'string' ? raw.reasoning : '',
+  };
 }
 
 export async function runStyleIteration(

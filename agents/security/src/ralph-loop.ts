@@ -179,7 +179,15 @@ export function parseToolResponse(
   if (!toolUse || !toolUse.input || typeof toolUse.input !== 'object') {
     throw new Error('Security agent did not invoke report_findings tool');
   }
-  return toolUse.input as ReportToolInput;
+  const raw = toolUse.input as Partial<ReportToolInput>;
+  // Anthropic's tool_use schema enforcement is best-effort, not strict —
+  // Claude can return non-array findings under model confusion. Coerce
+  // defensively so a malformed response doesn't crash the Ralph loop.
+  return {
+    findings: Array.isArray(raw.findings) ? raw.findings : [],
+    confidence: typeof raw.confidence === 'number' ? raw.confidence : 0,
+    reasoning: typeof raw.reasoning === 'string' ? raw.reasoning : '',
+  };
 }
 
 // ============================================================

@@ -9,7 +9,7 @@
     "properties": {
       "event_type": {
         "type": "string",
-        "enum": ["pull_request.opened", "pull_request.synchronize", "issue_comment.created"],
+        "enum": ["pull_request.opened", "pull_request.synchronize", "pull_request.reopened", "issue_comment.created"],
         "description": "GitHub webhook event type that triggered this review"
       },
       "pr_number": {
